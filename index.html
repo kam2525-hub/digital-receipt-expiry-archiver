@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保証書・領収書の一元管理！デジタル保存期間オートチェッカー</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-bottom: 3rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* フォームカード */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: var(--text-main);
+        }
+
+        input[type="text"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: #fff;
+            color: var(--text-main);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .file-drop-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .file-drop-area:hover {
+            border-color: var(--primary);
+            background: #f1f5f9;
+        }
+
+        .file-drop-area input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .preview-container {
+            margin-top: 1rem;
+            text-align: center;
+            display: none;
+        }
+
+        .preview-container img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            object-fit: contain;
+            border: 1px solid var(--border);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.8rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* フィルター・リスト */
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.4rem 0.8rem;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+            color: var(--text-sub);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .item-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .item-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            position: relative;
+            border-left: 6px solid var(--border);
+        }
+
+        .item-card.status-ok { border-left-color: var(--success); }
+        .item-card.status-warning { border-left-color: var(--warning); }
+        .item-card.status-expired { border-left-color: var(--danger); }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .item-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+
+        .item-category {
+            font-size: 0.75rem;
+            background: #e2e8f0;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: var(--text-sub);
+        }
+
+        .item-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+        }
+
+        .item-alert {
+            font-size: 0.85rem;
+            font-weight: bold;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .alert-ok { background: #f0fdf4; color: var(--success); }
+        .alert-warning { background: #fffbeb; color: var(--warning); }
+        .alert-expired { background: #fef2f2; color: var(--danger); }
+
+        .item-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border);
+            padding-top: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .thumbnail-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .delete-btn:hover { color: var(--danger); }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-sub);
+        }
+
+        /* モーダル */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+            display: none;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            max-width: 90%;
+            max-height: 90vh;
+            position: relative;
+            text-align: center;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.75rem;
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-sub);
+        }
+
+        @media(min-width: 640px) {
+            .item-body {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                オートチェッカー
+            </h1>
+            <p>保証書・領収書を撮影・登録するだけで、保存期限とメーカー保証を自動管理</p>
+        </header>
+
+        <!-- 登録フォーム -->
+        <div class="card">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                新規アイテム登録
+            </h2>
+            <form id="itemForm">
+                <div class="form-group">
+                    <label for="itemName">アイテム名（例: 液晶テレビ、ドラム式洗濯機）</label>
+                    <input type="text" id="itemName" required placeholder="例: 〇〇メーカー 液晶テレビ">
+                </div>
+
+                <div class="form-group">
+                    <label for="category">カテゴリ（保存期間の基準）</label>
+                    <select id="category" required>
+                        <option value="appliance">家電・PC（メーカー保証 + 法定保守パーツ）</option>
+                        <option value="highvalue">高額な買い物・家具（一般領収書: 5年保存推奨）</option>
+                        <option value="business">事業・経費関連（青色申告・法人: 7年保存義務）</option>
+                        <option value="other">その他・通常レシート（1年）</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="purchaseDate">購入日（レシートの日付）</label>
+                    <input type="date" id="purchaseDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="warrantyYears">メーカー保証期間（年）</label>
+                    <select id="warrantyYears">
+                        <option value="0">保証なし</option>
+                        <option value="1" selected>1年</option>
+                        <option value="2">2年</option>
+                        <option value="3">3年</option>
+                        <option value="5">5年</option>
+                        <option value="10">10年</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>保証書・領収書の撮影 / 画像アップロード</label>
+                    <div class="file-drop-area">
+                        <span>📷 タップして撮影 または 画像を選択</span>
+                        <input type="file" id="itemImage" accept="image/*">
+                    </div>
+                    <div class="preview-container" id="previewContainer">
+                        <img id="imagePreview" src="" alt="プレビュー">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    保存して自動管理を開始
+                </button>
+            </form>
+        </div>
+
+        <!-- 一覧セクション -->
+        <div class="card">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                登録済みアイテム一覧
+            </h2>
+
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">すべて</button>
+                <button class="filter-btn" data-filter="warranty-active">メーカー保証中</button>
+                <button class="filter-btn" data-filter="legal-active">法的保存期間内</button>
+                <button class="filter-btn" data-filter="expired">期限切れ・終了</button>
+            </div>
+
+            <div class="item-list" id="itemList">
+                <!-- JavaScriptで動的生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像プレビューモーダル -->
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal">&times;</button>
+            <img id="modalImage" src="" alt="拡大画像">
+        </div>
+    </div>
+
+    <script>
+        // DOM要素
+        const itemForm = document.getElementById('itemForm');
+        const itemNameInput = document.getElementById('itemName');
+        const categorySelect = document.getElementById('category');
+        const purchaseDateInput = document.getElementById('purchaseDate');
+        const warrantyYearsSelect = document.getElementById('warrantyYears');
+        const itemImageInput = document.getElementById('itemImage');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewContainer = document.getElementById('previewContainer');
+        const itemList = document.getElementById('itemList');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const closeModal = document.getElementById('closeModal');
+
+        let currentFilter = 'all';
+        let base64Image = '';
+
+        // 初期設定：本日の日付をセット
+        purchaseDateInput.valueAsDate = new Date();
+
+        // 画像のBase64変換
+        itemImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    base64Image = event.target.result;
+                    imagePreview.src = base64Image;
+                    previewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // LocalStorageからデータ取得
+        function getItems() {
+            const items = localStorage.getItem('warranty_checker_items');
+            return items ? JSON.parse(items) : [];
+        }
+
+        // LocalStorageへデータ保存
+        function saveItems(items) {
+            localStorage.setItem('warranty_checker_items', JSON.stringify(items));
+        }
+
+        // フォーム送信
+        itemForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const newItem = {
+                id: Date.now(),
+                name: itemNameInput.value,
+                category: categorySelect.value,
+                purchaseDate: purchaseDateInput.value,
+                warrantyYears: parseInt(warrantyYearsSelect.value),
+                image: base64Image || ''
+            };
+
+            const items = getItems();
+            items.unshift(newItem);
+            saveItems(items);
+
+            // フォームリセット
+            itemForm.reset();
+            base64Image = '';
+            previewContainer.style.display = 'none';
+            purchaseDateInput.valueAsDate = new Date();
+
+            renderItems();
+        });
+
+        // 日付加算ヘルパー
+        function addYears(dateString, years) {
+            const date = new Date(dateString);
+            date.setFullYear(date.getFullYear() + years);
+            return date;
+        }
+
+        // 残日数計算
+        function getDaysLeft(targetDate) {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const target = new Date(targetDate);
+            target.setHours(0,0,0,0);
+            const diffTime = target - today;
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        // アイテムのステータスと期限を計算
+        function calculateItemStatus(item) {
+            const pDate = new Date(item.purchaseDate);
+            
+            // メーカー保証切れ日
+            const warrantyEndDate = addYears(pDate, item.warrantyYears);
+            const warrantyDaysLeft = getDaysLeft(warrantyEndDate);
+
+            // 法定・推奨保存期間の決定
+            // 家電・PC: 6年 (補修用性能部品保有期間を意識)
+            // 高額・家具: 5年
+            // 事業・経費: 7年
+            // その他: 1年
+            let legalYears = 1;
+            let legalLabel = '通常レシート (1年)';
+            if (item.category === 'appliance') { legalYears = 6; legalLabel = '家電・補修部品基準 (6年)'; }
+            else if (item.category === 'highvalue') { legalYears = 5; legalLabel = '高額品・民法基準 (5年)'; }
+            else if (item.category === 'business') { legalYears = 7; legalLabel = '税法・事業基準 (7年)'; }
+
+            const legalEndDate = addYears(pDate, legalYears);
+            const legalDaysLeft = getDaysLeft(legalEndDate);
+
+            return {
+                warrantyEndDate: warrantyEndDate.toLocaleDateString(),
+                warrantyDaysLeft,
+                isWarrantyActive: warrantyDaysLeft >= 0 && item.warrantyYears > 0,
+                legalEndDate: legalEndDate.toLocaleDateString(),
+                legalDaysLeft,
+                isLegalActive: legalDaysLeft >= 0,
+                legalLabel
+            };
+        }
+
+        // 描画処理
+        function renderItems() {
+            const items = getItems();
+            itemList.innerHTML = '';
+
+            const filteredItems = items.filter(item => {
+                const status = calculateItemStatus(item);
+                if (currentFilter === 'warranty-active') return status.isWarrantyActive;
+                if (currentFilter === 'legal-active') return status.isLegalActive;
+                if (currentFilter === 'expired') return !status.isLegalActive && !status.isWarrantyActive;
+                return true;
+            });
+
+            if (filteredItems.length === 0) {
+                itemList.innerHTML = `<div class="empty-state">該当するアイテムはありません</div>`;
+                return;
+            }
+
+            filteredItems.forEach(item => {
+                const status = calculateItemStatus(item);
+                
+                // カードの全体ステータス判定（法的保存期限が切れていればexpired、保証切れならwarning、両方OKならok）
+                let cardClass = 'status-ok';
+                let alertHtml = '';
+
+                if (!status.isLegalActive) {
+                    cardClass = 'status-expired';
+                    alertHtml = `<div class="item-alert alert-expired">⚠️ 法的保存期間が終了しました（処分検討可）</div>`;
+                } else if (item.warrantyYears > 0 && !status.isWarrantyActive) {
+                    cardClass = 'status-warning';
+                    alertHtml = `<div class="item-alert alert-warning">⚡ メーカー保証は終了しました（法定保存は継続中あと${status.legalDaysLeft}日）</div>`;
+                } else {
+                    cardClass = 'status-ok';
+                    let msg = item.warrantyYears > 0 ? 
+                        `🛡️ メーカー保証中（あと${status.warrantyDaysLeft}日）` : 
+                        `📁 保存期間内（あと${status.legalDaysLeft}日）`;
+                    alertHtml = `<div class="item-alert alert-ok">${msg}</div>`;
+                }
+
+                // カテゴリ日本語名
+                const categoryNames = {
+                    appliance: '家電・PC',
+                    highvalue: '高額・家具',
+                    business: '事業・経費',
+                    other: 'その他'
+                };
+
+                const card = document.createElement('div');
+                card.className = `item-card ${cardClass}`;
+                card.innerHTML = `
+                    <div class="item-header">
+                        <div>
+                            <span class="item-category">${categoryNames[item.category]}</span>
+                            <div class="item-title">${escapeHtml(item.name)}</div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div>購入日: <br><strong>${item.purchaseDate}</strong></div>
+                        <div>メーカー保証: <br><strong>${item.warrantyYears}年 (〜${status.warrantyEndDate})</strong></div>
+                        <div>保存期限基準: <br><strong>${status.legalLabel}</strong></div>
+                        <div>保存期限満了: <br><strong>${status.legalEndDate}</strong></div>
+                    </div>
+                    ${alertHtml}
+                    <div class="item-footer">
+                        ${item.image ? `<button class="thumbnail-btn" onclick="openModal('${item.image}')">📷 保存画像を見る</button>` : '<span>画像なし</span>'}
+                        <button class="delete-btn" onclick="deleteItem(${item.id})">削除</button>
+                    </div>
+                `;
+                itemList.appendChild(card);
+            });
+        }
+
+        // 削除機能
+        window.deleteItem = function(id) {
+            if (confirm('このアイテムを削除しますか？')) {
+                let items = getItems();
+                items = items.filter(item => item.id !== id);
+                saveItems(items);
+                renderItems();
+            }
+        };
+
+        // モーダル表示
+        window.openModal = function(base64) {
+            modalImage.src = base64;
+            imageModal.style.display = 'flex';
+        }
+
+        closeModal.addEventListener('click', () => {
+            imageModal.style.display = 'none';
+        });
+
+        imageModal.addEventListener('click', (e) => {
+            if (e.target === imageModal) {
+                imageModal.style.display = 'none';
+            }
+        });
+
+        // フィルターボタン切り替え
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.getAttribute('data-filter');
+                renderItems();
+            });
+        });
+
+        // XSS対策簡易サニタイズ
+        function escapeHtml(str) {
+            return str.replace(/[&'`"<>]/g, function(match) {
+                return {
+                    '&': '&amp;',
+                    "'": '&#x27;',
+                    '`': '&#x60;',
+                    '"': '&quot;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                }[match];
+            });
+        }
+
+        // 初期描画
+        renderItems();
+    </script>
+</body>
+</html>
